@@ -2,25 +2,28 @@ require 'sinatra'
 require 'httparty'
 require 'securerandom'
 require 'twilio-ruby'
+require 'optimizely'
 
 # STEP 1: Add the Optimizely Full Stack Ruby gem
 # STEP 2: Require the Optimizely gem 
 # STEP 3: Include the twilio account SID, auth token and phone number below
 
 # => Log into Twilio and access the account SID, token, and number
-TWILIO_NUMBER = '+14157022765'
-TWILIO_ACCOUNT_SID = 'replace with twilio sid'
-TWILIO_AUTH_TOKEN = 'replace with auth token'
+TWILIO_NUMBER = '+19499450560'
+
 
 # Optimizely Setup
 
 # Step 4: Replace this url with your own Optimizely Project
 
-DATAFILE_URL = 'https://cdn.optimizely.com/public/8785893177/s/10677861955_10677861955.json'
+DATAFILE_URL = 'https://cdn.optimizely.com/public/8367220379/s/10712193766_10712193766.json'
 
 DATAFILE_URI_ENCODED = URI(DATAFILE_URL)
+datafile = HTTParty.get(DATAFILE_URL).body
+puts datafile
+optimizely_client = Optimizely::Project.new(datafile)
 
-# => Step 5: Use a library, such as HTTParty, to get grab the datafile from the CDN 
+# => Step 5: Use a library, such as HTTParty, to get grab the datafile from the CDN
 #         https://github.com/jnunemaker/httparty#examples
 #         example: response = HTTParty.get('http://api.stackexchange.com/2.2/questions?site=stackoverflow').body
 #         The above line will return the body of the http request 
@@ -48,11 +51,11 @@ get '/sms' do
   # => Getting the message that was sent to the service
   # => We could use this to understand what the user said, and create a conversational dialog
 	text_body = params[:Body]
-
+    
   # => Outputing the number and text body to the ruby console
-	puts "[CONSOLE LOG] New message from #{sender_number}"
-	puts "[CONSOLE LOG] They said #{text_body}"
-	puts "[CONSOLE LOG] Let's respond!"
+  # =>	puts "[CONSOLE LOG] New message from #{sender_number}"
+  # =>	puts "[CONSOLE LOG] They said #{text_body}"
+  # =>	puts "[CONSOLE LOG] Let's respond!"
 
 	# =>  Randomly generate a new User ID to demonstrate bucketing
 	# =>  Alternatively, you can use sender_number as the user ID, however due to deterministic bucketing using a single user id will always return the same variation
@@ -62,6 +65,22 @@ get '/sms' do
 	# => Example, test out different messages in your response
 	# => Using the helper function to reply to the number who messaged the sms service
   # => example: send_sms "Hey this is a response!" sender_number
+  # => Optimizely code
+  variation_key = optimizely_client.activate('Eng_french', user_id)
+  if variation_key == 'English'
+      puts "[CONSOLE LOG] New message from #{sender_number}"
+      puts "[CONSOLE LOG] They said #{text_body}"
+      puts "[CONSOLE LOG] Let's respond!"
+      elsif variation_key == 'French'
+      puts "[CONSOLE LOG] Nouveau message de #{sender_number}"
+      puts "[CONSOLE LOG] Ils ont dit #{text_body}"
+      puts "[CONSOLE LOG] Répondons!"
+      else
+      puts "[CONSOLE LOG] New Message from #{sender_number}"
+      puts "[CONSOLE LOG] Unbucketed said #{text_body}"
+      puts "[CONSOLE LOG] User ID #{user_id}"
+      puts "[CONSOLE LOG] Let's respond!"
+  end
 
 end
 
